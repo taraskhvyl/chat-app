@@ -10,6 +10,7 @@ interface MessageListProps {
   onLoadMore?: () => void;
   hasMore?: boolean;
   isLoadingMore?: boolean;
+  isLoadingInitial?: boolean;
   scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
 }
 
@@ -19,6 +20,7 @@ export function MessageList({
   onLoadMore,
   hasMore = false,
   isLoadingMore = false,
+  isLoadingInitial = false,
   scrollContainerRef,
 }: MessageListProps) {
   const sentinelRef = useLoadMoreOnScroll({
@@ -27,6 +29,14 @@ export function MessageList({
     isLoadingMore,
     scrollContainerRef,
   });
+
+  if (isLoadingInitial) {
+    return (
+      <div className="flex flex-1 items-center justify-center p-8">
+        <div className="animate-pulse text-zinc-500">Loading messages...</div>
+      </div>
+    );
+  }
 
   if (messages.length === 0) {
     return (

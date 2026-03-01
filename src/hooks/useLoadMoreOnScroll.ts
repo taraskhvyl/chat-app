@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 
 interface UseLoadMoreOnScrollOptions {
   onLoadMore: () => void;
@@ -17,25 +17,49 @@ export function useLoadMoreOnScroll({
   scrollContainerRef,
   rootMargin = "200px",
 }: UseLoadMoreOnScrollOptions) {
-  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [sentinel, setSentinel] = useState<HTMLDivElement | null>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  const sentinelRef = useCallback((node: HTMLDivElement | null) => {
+    setSentinel(node);
+  }, []);
 
   useEffect(() => {
-    if (!onLoadMore || !hasMore || isLoadingMore) return;
+    if (!onLoadMore || !hasMore || isLoadingMore || !sentinel) {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+        observerRef.current = null;
+      }
+      return;
+    }
 
     const root = scrollContainerRef?.current ?? null;
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
 
-    const observer = new IntersectionObserver(
+    observerRef.current = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting) onLoadMore();
+        if (entries[0]?.isIntersecting) {
+          onLoadMore();
+        }
       },
       { root: root ?? undefined, rootMargin, threshold: 0 }
     );
 
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [onLoadMore, hasMore, isLoadingMore, scrollContainerRef, rootMargin]);
+    observerRef.current.observe(sentinel);
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+        observerRef.current = null;
+      }
+    };
+  }, [
+    onLoadMore,
+    hasMore,
+    isLoadingMore,
+    scrollContainerRef,
+    rootMargin,
+    sentinel,
+  ]);
 
   return sentinelRef;
 }

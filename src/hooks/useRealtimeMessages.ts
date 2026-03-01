@@ -19,11 +19,16 @@ export function useRealtimeMessages(initialMessages: Message[]) {
   );
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isLoadingInitial, setIsLoadingInitial] = useState(
+    initialMessages.length === 0
+  );
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
 
   useEffect(() => {
-    setMessages(sortMessages(initialMessages));
+    if (initialMessages.length > 0) {
+      setMessages(sortMessages(initialMessages));
+    }
   }, [initialMessages]);
 
   const loadMore = useCallback(async () => {
@@ -31,17 +36,34 @@ export function useRealtimeMessages(initialMessages: Message[]) {
 
     setIsLoadingMore(true);
     try {
-      const currentCount = messagesRef.current.length;
-      const data = await apiClient.getMessages({
-        limit: currentCount + apiClient.PAGE_SIZE,
-      });
-
-      if (data.length <= currentCount) {
+      const currentMessages = messagesRef.current;
+      if (currentMessages.length === 0) {
         setHasMore(false);
+        return;
       }
 
-      if (data.length > 0) {
-        setMessages(sortMessages(data));
+      const oldestMessage = currentMessages[0];
+      const beforeTimestamp = new Date(oldestMessage.createdAt).toISOString();
+
+      const olderMessages = await apiClient.getMessages({
+        before: beforeTimestamp,
+        limit: apiClient.PAGE_SIZE,
+      });
+
+      if (olderMessages.length === 0) {
+        setHasMore(false);
+      } else {
+        setMessages((prev) => {
+          const combined = [...olderMessages, ...prev];
+          const deduped = Array.from(
+            new Map(combined.map((m) => [m.id, m])).values()
+          );
+          return sortMessages(deduped);
+        });
+
+        if (olderMessages.length < apiClient.PAGE_SIZE) {
+          setHasMore(false);
+        }
       }
     } catch {
       setHasMore(false);
@@ -53,19 +75,45 @@ export function useRealtimeMessages(initialMessages: Message[]) {
   useEffect(() => {
     const poll = async () => {
       try {
-        const limit = Math.max(messagesRef.current.length, apiClient.PAGE_SIZE);
-        const data = await apiClient.getMessages({ limit });
-        setMessages((prev) => {
-          const sorted = sortMessages(data);
-          if (
-            prev.length === sorted.length &&
-            prev.every((p, i) => p.id === sorted[i]?.id)
-          )
-            return prev;
-          return sorted;
+        const currentMessages = messagesRef.current;
+
+        if (currentMessages.length === 0) {
+          const now = new Date().toISOString();
+          const allMessages = await apiClient.getMessages({
+            before: now,
+            limit: 50,
+          });
+          setMessages(sortMessages(allMessages));
+          if (allMessages.length < 50) {
+            setHasMore(false);
+          }
+          setIsLoadingInitial(false);
+          return;
+        }
+
+        const latestMessage = currentMessages[currentMessages.length - 1];
+        if (!latestMessage?.createdAt) return;
+
+        const afterTimestamp = new Date(latestMessage.createdAt).toISOString();
+
+        const newMessages = await apiClient.getMessages({
+          after: afterTimestamp,
+          limit: 50,
         });
+
+        if (newMessages.length > 0) {
+          setMessages((prev) => {
+            const combined = [...prev, ...newMessages];
+            const deduped = Array.from(
+              new Map(combined.map((m) => [m.id, m])).values()
+            );
+            return sortMessages(deduped);
+          });
+        }
       } catch {
         // Ignore poll errors
+      } finally {
+        setIsLoadingInitial(false);
       }
     };
 
@@ -98,5 +146,19 @@ export function useRealtimeMessages(initialMessages: Message[]) {
     };
   }, []);
 
-  return { messages, loadMore, hasMore, isLoadingMore };
+  const addMessage = useCallback((msg: Message) => {
+    setMessages((prev) => {
+      if (prev.some((m) => m.id === msg.id)) return prev;
+      return sortMessages([...prev, msg]);
+    });
+  }, []);
+
+  return {
+    messages,
+    loadMore,
+    hasMore,
+    isLoadingMore,
+    isLoadingInitial,
+    addMessage,
+  };
 }

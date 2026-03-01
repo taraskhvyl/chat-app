@@ -25,9 +25,14 @@ const PAGE_SIZE = 50;
 export const apiClient = {
   PAGE_SIZE,
 
-  getMessages: (params?: { after?: string; limit?: number }) => {
+  getMessages: (params?: {
+    after?: string;
+    before?: string;
+    limit?: number;
+  }) => {
     const search = new URLSearchParams();
     if (params?.after) search.set("after", params.after);
+    if (params?.before) search.set("before", params.before);
     if (params?.limit) search.set("limit", String(params.limit));
     const query = search.toString();
     return request<Message[]>(`/api/messages${query ? `?${query}` : ""}`);

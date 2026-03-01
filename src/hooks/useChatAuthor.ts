@@ -1,36 +1,64 @@
 "use client";
 
-import { useSyncExternalStore, useCallback, useState } from "react";
+import { useState } from "react";
 
 const STORAGE_KEY = "chat-author";
 
-function getSnapshot() {
-  return typeof window === "undefined"
-    ? ""
-    : (sessionStorage.getItem(STORAGE_KEY) ?? "");
-}
+function generateRandomName(): string {
+  const adjectives = [
+    "Happy",
+    "Clever",
+    "Brave",
+    "Swift",
+    "Bright",
+    "Cool",
+    "Wise",
+    "Bold",
+    "Calm",
+    "Eager",
+    "Fancy",
+    "Gentle",
+    "Jolly",
+    "Kind",
+    "Lively",
+    "Mighty",
+  ];
+  const nouns = [
+    "Panda",
+    "Tiger",
+    "Eagle",
+    "Dolphin",
+    "Fox",
+    "Wolf",
+    "Bear",
+    "Lion",
+    "Hawk",
+    "Owl",
+    "Deer",
+    "Rabbit",
+    "Dragon",
+    "Phoenix",
+    "Falcon",
+    "Raven",
+  ];
 
-function getServerSnapshot() {
-  return "";
-}
+  const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const noun = nouns[Math.floor(Math.random() * nouns.length)];
+  const number = Math.floor(Math.random() * 100);
 
-function subscribe(callback: () => void) {
-  window.addEventListener("storage", callback);
-  return () => window.removeEventListener("storage", callback);
+  return `${adjective}${noun}${number}`;
 }
 
 export function useChatAuthor() {
-  const author = useSyncExternalStore(
-    subscribe,
-    getSnapshot,
-    getServerSnapshot
-  );
-  const [, forceUpdate] = useState({});
+  const [author] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const stored = sessionStorage.getItem(STORAGE_KEY);
+    if (stored) return stored;
 
-  const setAuthorAndPersist = useCallback((value: string) => {
-    sessionStorage.setItem(STORAGE_KEY, value);
-    forceUpdate({});
-  }, []);
+    const randomName = generateRandomName();
+    sessionStorage.setItem(STORAGE_KEY, randomName);
+    return randomName;
+  });
 
-  return [author, setAuthorAndPersist] as const;
+  return author;
 }

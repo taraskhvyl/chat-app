@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sendMessageSchema } from "@/lib/validation";
+import { sendMessageSchema } from "./validation";
 
 describe("sendMessageSchema", () => {
   it("accepts valid input", () => {

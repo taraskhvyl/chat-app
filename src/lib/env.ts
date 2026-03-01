@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-  API_URL: z.url({ protocol: /^https?$/ }).default("http://localhost:3000"),
-  AUTH_TOKEN: z.string().min(1).default("super-secret-doodle-token"),
+  API_URL: z.url({ protocol: /^https?$/ }),
+  AUTH_TOKEN: z.string().min(1),
 });
 
 function validateEnv() {

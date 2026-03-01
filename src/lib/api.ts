@@ -1,7 +1,7 @@
 import { env } from "./env";
 import type { Message, SendMessagePayload } from "@/types/message";
 
-function normalizeMessage(raw: Record<string, unknown>): Message {
+export function normalizeMessage(raw: Record<string, unknown>): Message {
   return {
     id: String(raw.id ?? raw._id ?? ""),
     message: String(raw.message ?? ""),
@@ -15,13 +15,15 @@ const getHeaders = () => ({
   "Content-Type": "application/json",
 });
 
-export async function fetchMessages(
-  after?: string,
-  limit = 20
-): Promise<Message[]> {
+export async function fetchMessages(params?: {
+  after?: string;
+  before?: string;
+  limit?: number;
+}): Promise<Message[]> {
   const url = new URL(`${env.API_URL}/api/v1/messages`);
-  if (after) url.searchParams.set("after", after);
-  url.searchParams.set("limit", String(limit));
+  if (params?.after) url.searchParams.set("after", params.after);
+  if (params?.before) url.searchParams.set("before", params.before);
+  url.searchParams.set("limit", String(params?.limit ?? 20));
 
   const response = await fetch(url.toString(), {
     headers: getHeaders(),

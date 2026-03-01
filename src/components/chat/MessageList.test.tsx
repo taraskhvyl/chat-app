@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { MessageList } from "@/components/chat/MessageList";
+import { MessageList } from "./MessageList";
 
 const mockMessages = [
   {

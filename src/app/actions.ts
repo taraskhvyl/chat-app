@@ -2,7 +2,6 @@
 
 import { sendMessage } from "@/lib/api";
 import { sendMessageSchema } from "@/lib/validation";
-import { revalidatePath } from "next/cache";
 
 export async function submitMessage(formData: FormData) {
   const raw = {
@@ -17,9 +16,8 @@ export async function submitMessage(formData: FormData) {
   }
 
   try {
-    await sendMessage(parsed.data);
-    revalidatePath("/");
-    return { success: true };
+    const created = await sendMessage(parsed.data);
+    return { success: true, message: created };
   } catch (err) {
     return {
       error: err instanceof Error ? err.message : "Failed to send message",

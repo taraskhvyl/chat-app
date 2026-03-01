@@ -1,9 +1,8 @@
 "use client";
 
-import { useRef } from "react";
-import { ChatLayout } from "./ChatLayout";
+import { useRef, useCallback, useEffect } from "react";
 import { MessageList } from "./MessageList";
-import { MessageInput } from "./MessageInput";
+import { ChatForm } from "./ChatForm";
 import { useRealtimeMessages } from "@/hooks/useRealtimeMessages";
 import { useChatAuthor } from "@/hooks/useChatAuthor";
 import { useScrollOnMessagesChange } from "@/hooks/useScrollOnMessagesChange";
@@ -14,9 +13,15 @@ interface ChatContainerProps {
 }
 
 export function ChatContainer({ initialMessages }: ChatContainerProps) {
-  const [currentAuthor, setCurrentAuthor] = useChatAuthor();
-  const { messages, loadMore, hasMore, isLoadingMore } =
-    useRealtimeMessages(initialMessages);
+  const currentAuthor = useChatAuthor();
+  const {
+    messages,
+    loadMore,
+    hasMore,
+    isLoadingMore,
+    isLoadingInitial,
+    addMessage,
+  } = useRealtimeMessages(initialMessages);
   const scrollRef = useRef<HTMLDivElement>(null);
   const handleLoadMore = useScrollOnMessagesChange(
     scrollRef,
@@ -24,25 +29,40 @@ export function ChatContainer({ initialMessages }: ChatContainerProps) {
     loadMore
   );
 
+  const addMessageRef = useRef(addMessage);
+
+  useEffect(() => {
+    addMessageRef.current = addMessage;
+  }, [addMessage]);
+
+  const handleMessageSent = useCallback((message: Message) => {
+    addMessageRef.current(message);
+    requestAnimationFrame(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = 0;
+      }
+    });
+  }, []);
+
   return (
-    <ChatLayout
-      ref={scrollRef}
-      messagesArea={
+    <div className="chat-bg mx-auto flex h-screen max-w-2xl flex-col bg-zinc-100/95">
+      <div
+        ref={scrollRef}
+        className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto"
+        role="log"
+        aria-live="polite"
+      >
         <MessageList
           messages={messages}
           currentAuthor={currentAuthor}
           onLoadMore={handleLoadMore}
           hasMore={hasMore}
           isLoadingMore={isLoadingMore}
+          isLoadingInitial={isLoadingInitial}
           scrollContainerRef={scrollRef}
         />
-      }
-      input={
-        <MessageInput
-          defaultAuthor={currentAuthor}
-          onAuthorChange={setCurrentAuthor}
-        />
-      }
-    />
+      </div>
+      <ChatForm author={currentAuthor} onMessageSent={handleMessageSent} />
+    </div>
   );
 }

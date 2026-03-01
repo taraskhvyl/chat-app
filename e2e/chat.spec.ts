@@ -8,7 +8,7 @@ test.describe("Chat", () => {
 
   test("can send a message", async ({ page }) => {
     await page.goto("/");
-    await page.getByPlaceholder("Your name").fill("E2E Tester");
+    await expect(page.getByRole("log")).toBeVisible({ timeout: 10000 });
     await page.getByPlaceholder("Message").fill("Hello from E2E");
     await page.getByRole("button", { name: "Send" }).click();
     await expect(page.getByText("Hello from E2E")).toBeVisible({
